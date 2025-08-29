@@ -15,7 +15,7 @@ function validateData(data) {
     const summaryCounts = {};
 
     // Controlled vocab lists
-    const reasonNotTagged = ["Not accessible","Not safe to access","In use","Other"];
+    const reasonNotTagged = ["Remove Tag - Out of Scope", "Remove Tag - Asset (no tag)", "Non-Tagged Asset", "Not Found, Out of Scope", "PM Task, System Level", "Tag on PM (put reason in comments)"];
     const assetStatusVals = ["In-Service","Out-Of-Service","Stand-By","Emergency Use Only","Abandoned In Place","Seasonally In-Service","Back-Up","Removed from Facility","Critical Spare","Surplus"];
     const assetRecordStatusVals = ["Active","In-Active"];
     const caAgeVals = ["New less than 5 years old","Refurbished within 5 years","Refurbished or installed between 5 and 10 years ago","Refurbished or installed more than 10 years ago"];
@@ -207,3 +207,4 @@ document.getElementById('validateBtn').addEventListener('click', function() {
     };
     reader.readAsArrayBuffer(file);
 });
+

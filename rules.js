@@ -8,6 +8,22 @@ function buildExpectedAssetName(row){
     return `${desc}-${wz}-${fl}-${rm}-${anum}`.replace(/\s+/g,' ').trim();
 }
 
+// Utility: calculate CA-Age category from In-Service Date
+function calculateCAAge(dateStr){
+    if(!dateStr) return "";
+    const parts = dateStr.split("/");
+    if(parts.length!==3) return "";
+    const d = new Date(parts[2], parts[0]-1, parts[1]); // MM/DD/YYYY
+    if(isNaN(d)) return "";
+    const now = new Date();
+    const years = (now - d) / (1000*60*60*24*365);
+
+    if(years < 5) return "New less than 5 years old";
+    if(years <= 10) return "Refurbished or installed between 5 and 10 years ago";
+    if(years > 10 && years <= 20) return "Refurbished within 5 years";
+    return "Refurbished or installed more than 10 years ago";
+}
+
 function validateData(data) {
     const rowErrors = {};
     const corrected = [];
@@ -25,7 +41,6 @@ function validateData(data) {
     ];
     const assetStatusVals = ["In-Service","Out-Of-Service","Stand-By","Emergency Use Only","Abandoned In Place","Seasonally In-Service","Back-Up","Removed from Facility","Critical Spare","Surplus"];
     const assetRecordStatusVals = ["Active","In-Active"];
-    const caAgeVals = ["New less than 5 years old","Refurbished within 5 years","Refurbished or installed between 5 and 10 years ago","Refurbished or installed more than 10 years ago"];
     const assetConditionVals = ["5 – Excellent","4 – Good","3 – Average","2 – Poor","1 – Crisis"];
     const caEnvVals = ["Clean, temperate, dry","Wide variation in temp/humidity/dust","Extremes of temperature","Liable to extreme dust or flooding"];
     const caCapacityUnitVals = ["AMP","BTU","CFM","GAL","GPM","HP","kVA","KW","Ln.Ft.","MBH","MW","N/A","Other (List in Comments)","PSI","SCFM","Sq.Ft.","TON","V"];
@@ -39,7 +54,7 @@ function validateData(data) {
 
     data.forEach((row, idx) => {
         let correctedRow = {...row};
-        const rowNum = idx+2; // account for header row in Excel
+        const rowNum = idx+2;
 
         // --- Site / Workzone / Building / Floor / Room ---
         if(!row["Site Name"]) addRowError(rowNum,"Site Name blank","Site Name");
@@ -52,14 +67,14 @@ function validateData(data) {
         const expectedAssetName = buildExpectedAssetName(row);
         if(!row["Asset Name"] || row["Asset Name"].trim() !== expectedAssetName){
             addRowError(rowNum,"Asset Name mismatch","Asset Name");
-            correctedRow["Asset Name"] = expectedAssetName; // auto-fix
+            correctedRow["Asset Name"] = expectedAssetName;
         }
 
         // --- Status ---
         if(row["Status"]){
             const val = row["Status"].trim().toLowerCase();
             if(val==="online"||val==="offline"){
-                correctedRow["Status"] = val.charAt(0).toUpperCase()+val.slice(1); // auto-fix case
+                correctedRow["Status"] = val.charAt(0).toUpperCase()+val.slice(1);
             } else addRowError(rowNum,"Invalid Status","Status");
         }
 
@@ -79,7 +94,7 @@ function validateData(data) {
         // --- Asset Record Status ---
         if(row["att_Asset Record Status"]){
             if(assetRecordStatusVals.map(v=>v.toLowerCase()).includes(row["att_Asset Record Status"].toLowerCase())){
-                correctedRow["att_Asset Record Status"] = assetRecordStatusVals.find(v=>v.toLowerCase()===row["att_Asset Record Status"].toLowerCase()); // auto-fix case
+                correctedRow["att_Asset Record Status"] = assetRecordStatusVals.find(v=>v.toLowerCase()===row["att_Asset Record Status"].toLowerCase());
             } else {
                 addRowError(rowNum,"Invalid Asset Record Status","Asset Record Status");
             }
@@ -91,9 +106,12 @@ function validateData(data) {
         }
 
         // --- CA-Age ---
-        if(row["att_In-Service Date"] && !row["att_CA-Age"]) addRowError(rowNum,"CA-Age blank","CA-Age");
-        if(row["att_CA-Age"] && !caAgeVals.map(v=>v.toLowerCase()).includes(row["att_CA-Age"].toLowerCase())){
-            addRowError(rowNum,"Invalid CA-Age","CA-Age");
+        if(row["att_In-Service Date"]){
+            const calcAge = calculateCAAge(row["att_In-Service Date"]);
+            if(!row["att_CA-Age"] || row["att_CA-Age"] !== calcAge){
+                addRowError(rowNum,"CA-Age blank or mismatch","CA-Age");
+                correctedRow["att_CA-Age"] = calcAge;
+            }
         }
 
         // --- CA-Condition / Asset Condition ---
@@ -131,6 +149,7 @@ function validateData(data) {
         corrected.push(correctedRow);
         const reportRow = {...row};
         reportRow["Row #"] = rowNum;
+        reportRow["Has Errors"] = rowErrors[rowNum] ? "Yes" : "No";
         reportRow["Validation Errors"] = rowErrors[rowNum] ? rowErrors[rowNum].join("; ") : "";
         reportRows.push(reportRow);
     });

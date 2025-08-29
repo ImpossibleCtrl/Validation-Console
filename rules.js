@@ -15,7 +15,14 @@ function validateData(data) {
     const summaryCounts = {};
 
     // Controlled vocab lists
-    const reasonNotTagged = ["Remove Tag - Out of Scope", "Remove Tag - Asset (no tag)", "Non-Tagged Asset", "Not Found, Out of Scope", "PM Task, System Level", "Tag on PM (put reason in comments)"];
+    const reasonNotTaggedVals = [
+        "Remove Tag - Out of Scope",
+        "Remove Tag - Asset (no tag)",
+        "Non-Tagged Asset",
+        "Not Found, Out of Scope",
+        "PM Task, System Level",
+        "Tag on PM (put reason in comments)"
+    ];
     const assetStatusVals = ["In-Service","Out-Of-Service","Stand-By","Emergency Use Only","Abandoned In Place","Seasonally In-Service","Back-Up","Removed from Facility","Critical Spare","Surplus"];
     const assetRecordStatusVals = ["Active","In-Active"];
     const caAgeVals = ["New less than 5 years old","Refurbished within 5 years","Refurbished or installed between 5 and 10 years ago","Refurbished or installed more than 10 years ago"];
@@ -34,115 +41,93 @@ function validateData(data) {
         let correctedRow = {...row};
         const rowNum = idx+2; // account for header row in Excel
 
-        // Rule 1: Site Name required
+        // --- Site / Workzone / Building / Floor / Room ---
         if(!row["Site Name"]) addRowError(rowNum,"Site Name blank","Site Name");
+        if(row["Work Zone"] && row["Asset Name"] && !row["Asset Name"].includes(row["Work Zone"])) addRowError(rowNum,"Workzone mismatch","Work Zone");
+        if(row["Building"] && row["Asset Name"] && !row["Asset Name"].includes(row["Building"])) addRowError(rowNum,"Building mismatch","Building");
+        if(row["Floor"] && row["Asset Name"] && !row["Asset Name"].includes(row["Floor"])) addRowError(rowNum,"Floor mismatch","Floor");
+        if(row["Room"] && row["Asset Name"] && !row["Asset Name"].includes(row["Room"])) addRowError(rowNum,"Room mismatch","Room");
 
-        // Rule 2: Workzone check
-        if(row["Work Zone"] && row["Asset Name"] && !row["Asset Name"].includes(row["Work Zone"])){
-            addRowError(rowNum,"Workzone mismatch","Work Zone");
-        }
-
-        // Rule 3: Building check
-        if(row["Building"] && row["Asset Name"] && !row["Asset Name"].includes(row["Building"])){
-            addRowError(rowNum,"Building mismatch","Building");
-        }
-
-        // Rule 4: Floor/Room check
-        if(row["Floor"] && row["Asset Name"] && !row["Asset Name"].includes(row["Floor"])){
-            addRowError(rowNum,"Floor mismatch","Floor");
-        }
-        if(row["Room"] && row["Asset Name"] && !row["Asset Name"].includes(row["Room"])){
-            addRowError(rowNum,"Room mismatch","Room");
-        }
-
-        // Rule 5+6: Asset # presence
+        // --- Asset # / Asset Name ---
         const expectedAssetName = buildExpectedAssetName(row);
         if(!row["Asset Name"] || row["Asset Name"].trim() !== expectedAssetName){
             addRowError(rowNum,"Asset Name mismatch","Asset Name");
-            correctedRow["Asset Name"] = expectedAssetName;
+            correctedRow["Asset Name"] = expectedAssetName; // auto-fix
         }
 
-        // Rule 7: Status Online/Offline
+        // --- Status ---
         if(row["Status"]){
             const val = row["Status"].trim().toLowerCase();
             if(val==="online"||val==="offline"){
-                correctedRow["Status"] = val.charAt(0).toUpperCase()+val.slice(1);
+                correctedRow["Status"] = val.charAt(0).toUpperCase()+val.slice(1); // auto-fix case
             } else addRowError(rowNum,"Invalid Status","Status");
         }
 
-        // Rule 8: Reason Not Tagged
+        // --- Reason Not Tagged ---
         if(!row["TagID"] && !row["Reason Not Tagged"]){
-            addRowError(rowNum,"TagID blank + Reason blank","Reason Not Tagged");
+            addRowError(rowNum,"TagID blank + Reason Not Tagged blank","Reason Not Tagged");
         }
-        if(row["Reason Not Tagged"] && !reasonNotTagged.map(v=>v.toLowerCase()).includes(row["Reason Not Tagged"].toLowerCase())){
-            addRowError(rowNum,"Invalid Reason Not Tagged","Reason Not Tagged");
+        if(row["Reason Not Tagged"] && !reasonNotTaggedVals.map(v=>v.toLowerCase()).includes(row["Reason Not Tagged"].toLowerCase())){
+            addRowError(rowNum,`Invalid Reason Not Tagged: '${row["Reason Not Tagged"]}'`,"Reason Not Tagged");
         }
 
-        // Rule 9: Asset Status
+        // --- Asset Status ---
         if(row["att_Asset Status"] && !assetStatusVals.map(v=>v.toLowerCase()).includes(row["att_Asset Status"].toLowerCase())){
             addRowError(rowNum,"Invalid Asset Status","Asset Status");
         }
 
-        // Rule 10: Asset Record Status
-        if(row["att_Asset Record Status"] && !assetRecordStatusVals.map(v=>v.toLowerCase()).includes(row["att_Asset Record Status"].toLowerCase())){
-            addRowError(rowNum,"Invalid Asset Record Status","Asset Record Status");
+        // --- Asset Record Status ---
+        if(row["att_Asset Record Status"]){
+            if(assetRecordStatusVals.map(v=>v.toLowerCase()).includes(row["att_Asset Record Status"].toLowerCase())){
+                correctedRow["att_Asset Record Status"] = assetRecordStatusVals.find(v=>v.toLowerCase()===row["att_Asset Record Status"].toLowerCase()); // auto-fix case
+            } else {
+                addRowError(rowNum,"Invalid Asset Record Status","Asset Record Status");
+            }
         }
 
-        // Rule 11: In-Service Date format
+        // --- In-Service Date ---
         if(row["att_In-Service Date"] && !/^\d{2}\/\d{2}\/\d{4}$/.test(row["att_In-Service Date"])){
             addRowError(rowNum,"Invalid In-Service Date","In-Service Date");
         }
 
-        // Rule 12: CA-Age
+        // --- CA-Age ---
         if(row["att_In-Service Date"] && !row["att_CA-Age"]) addRowError(rowNum,"CA-Age blank","CA-Age");
         if(row["att_CA-Age"] && !caAgeVals.map(v=>v.toLowerCase()).includes(row["att_CA-Age"].toLowerCase())){
             addRowError(rowNum,"Invalid CA-Age","CA-Age");
         }
 
-        // Rule 13: CA-Condition
+        // --- CA-Condition / Asset Condition ---
         if(!row["att_CA-Condition"]) addRowError(rowNum,"CA-Condition blank","CA-Condition");
-
-        // Rule 14: Asset Condition
         if(row["att_Asset Condition"] && !assetConditionVals.map(v=>v.toLowerCase()).includes(row["att_Asset Condition"].toLowerCase())){
             addRowError(rowNum,"Invalid Asset Condition","Asset Condition");
         }
 
-        // Rule 15: CA-Environment
+        // --- CA-Environment ---
         if(row["att_CA-Environment"] && !caEnvVals.map(v=>v.toLowerCase()).includes(row["att_CA-Environment"].toLowerCase())){
             addRowError(rowNum,"Invalid CA-Environment","CA-Environment");
         }
 
-        // Rule 16+17: Capacity
-        if(row["att_Capacity Qty"] && !row["att_Capacity Unit"]){
-            addRowError(rowNum,"Capacity Qty present but Unit blank","Capacity");
-        }
+        // --- Capacity ---
+        if(row["att_Capacity Qty"] && !row["att_Capacity Unit"]) addRowError(rowNum,"Capacity Qty present but Unit blank","Capacity");
         if(row["att_Capacity Unit"] && !caCapacityUnitVals.map(v=>v.toLowerCase()).includes(row["att_Capacity Unit"].toLowerCase())){
             addRowError(rowNum,"Invalid Capacity Unit","Capacity");
         }
 
-        // Rule 18/26: Images
+        // --- Images ---
         const imgCount = ["Image","Image 2","Image 3","Image 4","Image 5"].filter(c=>row[c]).length;
         if(imgCount < 3) addRowError(rowNum,`Only ${imgCount} images provided (min 3)`,"Images");
         if(row["Asset Description"] && /(panelboard|switchgear|switchboard)/i.test(row["Asset Description"]) && imgCount < 5){
             addRowError(rowNum,"Insufficient images for Panelboard/Switchgear","Images");
         }
 
-        // Rule 19: Manufacturer case fix
+        // --- Manufacturer / Model / Serial / JACS / ID ---
         if(row["Manufacturer"]) correctedRow["Manufacturer"] = row["Manufacturer"].charAt(0).toUpperCase()+row["Manufacturer"].slice(1).toLowerCase();
-
-        // Rule 20: Model uppercase
         if(row["Model"]) correctedRow["Model"] = row["Model"].toUpperCase();
-
-        // Rule 21: Serial uppercase
         if(row["Serial #"]) correctedRow["Serial #"] = row["Serial #"].toUpperCase();
-
-        // Rule 22: JACS Code uppercase
         if(row["JACS Code"]) correctedRow["JACS Code"] = row["JACS Code"].toUpperCase();
-
-        // Rule 23: ID uppercase
         if(row["ID"]) correctedRow["ID"] = row["ID"].toUpperCase();
 
-        // Collect corrected + report
+        // --- Collect corrected + report rows ---
         corrected.push(correctedRow);
         const reportRow = {...row};
         reportRow["Row #"] = rowNum;
@@ -177,7 +162,7 @@ document.getElementById('validateBtn').addEventListener('click', function() {
         const jsonData = XLSX.utils.sheet_to_json(ws,{defval:""});
         const result = validateData(jsonData);
 
-        // Show errors
+        // Show errors in browser
         const resultsDiv = document.getElementById('results');
         resultsDiv.innerHTML = "<h3>Validation Results (Grouped by Row)</h3>";
         for(const rowNum in result.rowErrors){
@@ -207,4 +192,3 @@ document.getElementById('validateBtn').addEventListener('click', function() {
     };
     reader.readAsArrayBuffer(file);
 });
-

@@ -199,11 +199,35 @@ document.getElementById('validateBtn').addEventListener('click', function() {
         const dl = document.getElementById('downloadCorrected');
         dl.href = url; dl.style.display="inline-block"; dl.download = "Corrected.xlsx";
 
-        // Validation report
+        // Validation report with highlighting
         const reportSheet = XLSX.utils.json_to_sheet(result.reportRows);
+
+        for (let R = 2; R <= result.reportRows.length+1; ++R) {
+            const hasErrorsCell = reportSheet[`B${R}`]; // "Has Errors"
+            const errorCell = reportSheet[`C${R}`]; // "Validation Errors"
+            if(hasErrorsCell && hasErrorsCell.v === "Yes"){
+                hasErrorsCell.s = {
+                    fill: { fgColor: { rgb: "FFC7CE" } },
+                    font: { color: { rgb: "9C0006" }, bold: true }
+                };
+                if(errorCell){
+                    errorCell.s = {
+                        fill: { fgColor: { rgb: "FFC7CE" } },
+                        font: { color: { rgb: "9C0006" }, bold: true }
+                    };
+                }
+            }
+            if(hasErrorsCell && hasErrorsCell.v === "No"){
+                hasErrorsCell.s = {
+                    fill: { fgColor: { rgb: "C6EFCE" } },
+                    font: { color: { rgb: "006100" }, bold: true }
+                };
+            }
+        }
+
         const reportWB = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(reportWB, reportSheet, "Validation Report");
-        const wbout2 = XLSX.write(reportWB,{bookType:'xlsx',type:'array'});
+        const wbout2 = XLSX.write(reportWB,{bookType:'xlsx',type:'array',cellStyles:true});
         const blob2 = new Blob([wbout2], {type:"application/octet-stream"});
         const url2 = URL.createObjectURL(blob2);
         const dl2 = document.getElementById('downloadReport');

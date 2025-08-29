@@ -1,0 +1,37 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background: #f9f9f9;
+}
+h1 {
+    color: #333;
+}
+#results {
+    margin-top: 20px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    background: #fff;
+    max-height: 300px;
+    overflow-y: auto;
+}
+button {
+    margin-top: 10px;
+    padding: 10px 15px;
+    background: #007acc;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+}
+button:hover {
+    background: #005fa3;
+}
+#summary {
+    background:#fff;
+    border:1px solid #ccc;
+    padding:10px;
+}
+.download-link {
+    display:inline-block;
+    border-radius:4px;
+}

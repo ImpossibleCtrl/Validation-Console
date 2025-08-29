@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BMS Validation Console</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>BMS Validation Console</h1>
+    <p>Upload your dataset (CSV/XLSX), run validation, and download corrected export + validation report.</p>
+    <input type="file" id="fileInput" accept=".csv, .xlsx">
+    <button id="validateBtn">Run Validation</button>
+    <div id="results"></div>
+    <div id="summary" style="margin-top:20px;">
+        <h3>Summary Dashboard</h3>
+        <canvas id="summaryChart" width="400" height="200"></canvas>
+    </div>
+    <a id="downloadCorrected" class="download-link" style="display:none; background:#007acc; color:white; padding:8px; text-decoration:none; margin-right:10px;">🔵 Download Corrected.xlsx (Auto-Fixes Applied)</a>
+    <a id="downloadReport" class="download-link" style="display:none; background:#28a745; color:white; padding:8px; text-decoration:none;">🟢 Download Validation_Report.xlsx (Original + Errors Column)</a>
+    <script src="rules.js"></script>
+</body>
+</html>
